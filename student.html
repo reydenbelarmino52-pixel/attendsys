@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Registry - AttendSys</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand fade-in-up">
+                <div class="brand-wrapper">
+                    <div class="brand-logo"><i class="fa-solid fa-book-open-reader"></i></div>
+                    <div class="brand-text"><h2>ICCT Cainta</h2><p>Room B2-A9</p></div>
+                </div>
+                <button class="sidebar-toggle-btn" id="closeSidebarBtn"><i class="fa-solid fa-bars"></i></button>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item fade-in-up delay-1"><i class="fa-solid fa-border-all"></i><span>Dashboard</span></a>
+                <a href="student.html" class="nav-item fade-in-up delay-2 active"><i class="fa-solid fa-users"></i><span>Student</span></a>
+                <a href="session.html" class="nav-item fade-in-up delay-3"><i class="fa-solid fa-calendar-days"></i><span>Session</span></a>
+                <a href="analytics.html" class="nav-item fade-in-up delay-4"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></a>
+            </nav>
+            <a href="#" class="nav-item logout-btn fade-in-up delay-4"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Log out</span></a>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header fade-in-up">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <button class="mobile-menu-btn" id="openSidebarBtn"><i class="fa-solid fa-bars"></i></button>
+                    <div>
+                        <h1>Student Registry</h1>
+                        <p>Manage enrolled students and their assigned RFID cards.</p>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="openStudentModal()"><i class="fa-solid fa-plus"></i> Add Student</button>
+            </header>
+
+            <div class="table-container fade-in-up delay-1">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px;">
+                    <div class="search-bar" style="margin-bottom: 0;">
+                        <i class="fa-solid fa-magnifying-glass" style="color: #94a3b8;"></i>
+                        <input type="text" placeholder="Search by name, ID or RFID...">
+                    </div>
+                    <span id="studentCountLabel" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">0 Results Found</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Info</th>
+                            <th>Course & Year</th>
+                            <th>RFID Tag</th>
+                            <th>Registered</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody"></tbody>
+                </table>
+                <div id="paginationControls" class="pagination"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="createStudentModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Add New Student</h3>
+                <button class="modal-close" onclick="closeStudentModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="form-group" style="text-align: center; margin-bottom: 25px;">
+                <label>Student Image</label>
+                <div style="width: 80px; height: 80px; background: #f1f5f9; border-radius: 50%; margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px dashed #cbd5e1;" id="imagePreviewContainer">
+                    <i class="fa-solid fa-camera" style="color: #94a3b8; font-size: 1.5rem;" id="imagePreviewIcon"></i>
+                    <img id="imagePreview" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                </div>
+                <input type="file" id="newStudentImg" accept="image/*" style="font-size: 0.8rem; width: 80%;">
+            </div>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="newStudentName" placeholder="e.g. Jane Doe" autocomplete="off">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group"><label>Student No.</label><input type="text" id="newStudentNo" placeholder="e.g. 2024-001" autocomplete="off"></div>
+                <div class="form-group">
+                    <label>Year Level</label>
+                    <select id="newStudentYear"><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group"><label>Course</label><input type="text" id="newStudentCourse" placeholder="e.g. BSIT" autocomplete="off"></div>
+                <div class="form-group"><label>RFID Tag (Required)</label><input type="text" id="newStudentRfid" placeholder="e.g. A1 B2 C3 D4" autocomplete="off"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeStudentModal()">Cancel</button>
+                <button class="btn-primary" onclick="createNewStudent()" id="saveStudentBtn">Save Student</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editStudentModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Edit Student</h3>
+                <button class="modal-close" onclick="closeEditStudentModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="hidden" id="editStudentIdDb">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="editStudentName" autocomplete="off">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group"><label>Student No.</label><input type="text" id="editStudentNo" autocomplete="off"></div>
+                <div class="form-group">
+                    <label>Year Level</label>
+                    <select id="editStudentYear"><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group"><label>Course</label><input type="text" id="editStudentCourse" autocomplete="off"></div>
+                <div class="form-group"><label>RFID Tag</label><input type="text" id="editStudentRfid" autocomplete="off"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeEditStudentModal()">Cancel</button>
+                <button class="btn-primary" onclick="updateStudent()" id="updateStudentBtn">Update Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

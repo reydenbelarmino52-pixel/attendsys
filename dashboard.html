@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AttendSys</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand fade-in-up">
+                <div class="brand-wrapper">
+                    <div class="brand-logo"><i class="fa-solid fa-book-open-reader"></i></div>
+                    <div class="brand-text"><h2>ICCT Cainta</h2><p>Room B2-A9</p></div>
+                </div>
+                <button class="sidebar-toggle-btn" id="closeSidebarBtn"><i class="fa-solid fa-bars"></i></button>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item fade-in-up delay-1"><i class="fa-solid fa-border-all"></i><span>Dashboard</span></a>
+                <a href="student.html" class="nav-item fade-in-up delay-2"><i class="fa-solid fa-users"></i><span>Student</span></a>
+                <a href="session.html" class="nav-item fade-in-up delay-3"><i class="fa-solid fa-calendar-days"></i><span>Session</span></a>
+                <a href="analytics.html" class="nav-item fade-in-up delay-4"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></a>
+            </nav>
+            <a href="#" class="nav-item logout-btn fade-in-up delay-4"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Log out</span></a>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header fade-in-up">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <button class="mobile-menu-btn" id="openSidebarBtn"><i class="fa-solid fa-bars"></i></button>
+                    <div>
+                        <h1>Overview Dashboard</h1>
+                        <p>Real-time attendance activity for Room B2-01.</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card card-hover fade-in-up delay-1">
+                    <div class="stat-header"><span class="stat-title">Total Students</span><div class="stat-icon" style="background: var(--color-primary-light); color: var(--color-primary);"><i class="fa-solid fa-users"></i></div></div>
+                    <h2 id="dashTotalStudents">0</h2>
+                </div>
+                <div class="stat-card card-hover fade-in-up delay-2">
+                    <div class="stat-header"><span class="stat-title">Present Today</span><div class="stat-icon" style="background: var(--color-green-light); color: var(--color-green);"><i class="fa-solid fa-user-check"></i></div></div>
+                    <h2 id="dashPresentToday" style="color: var(--color-green)">0</h2>
+                </div>
+                <div class="stat-card card-hover fade-in-up delay-3">
+                    <div class="stat-header"><span class="stat-title">Absent Today</span><div class="stat-icon" style="background: var(--color-red-light); color: var(--color-red);"><i class="fa-solid fa-user-xmark"></i></div></div>
+                    <h2 id="dashAbsentToday" style="color: var(--color-red)">0</h2>
+                </div>
+                <div class="stat-card card-hover fade-in-up delay-4">
+                    <div class="stat-header"><span class="stat-title">Excuse Today</span><div class="stat-icon" style="background: var(--color-primary-light); color: var(--color-primary);"><i class="fa-solid fa-user-clock"></i></div></div>
+                    <h2 id="dashExcuseToday" style="color: var(--color-primary)">0</h2>
+                </div>
+            </div>
+
+            <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div class="card fade-in-up delay-2">
+                    <h3 style="font-size: 1.1rem; font-weight: 700;">Attendance Class Rate</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Percentage of students present in class</p>
+                    <div class="doughnut-chart"><div class="doughnut-hole"></div></div>
+                    <div style="display: flex; justify-content: center; gap: 24px; margin-top: 30px;">
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-dark);"><i class="fa-solid fa-circle" style="color: var(--color-green); margin-right: 6px;"></i> Present</span>
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-dark);"><i class="fa-solid fa-circle" style="color: var(--color-red); margin-right: 6px;"></i> Absent</span>
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-dark);"><i class="fa-solid fa-circle" style="color: var(--color-primary); margin-right: 6px;"></i> Excuse</span>
+                    </div>
+                </div>
+
+                <div class="card fade-in-up delay-3" style="padding: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 25px 25px 15px; border-bottom: 1px solid #f1f5f9;">
+                        <h3>Recent RFID Scans</h3>
+                        <div style="color: var(--color-green); background: var(--color-green-light); width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; border-radius: 10px;"><i class="fa-solid fa-wifi"></i></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; padding: 10px 25px 25px;" id="scanList"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

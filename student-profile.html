@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Profile - AttendSys</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand fade-in-up">
+                <div class="brand-wrapper">
+                    <div class="brand-logo"><i class="fa-solid fa-book-open-reader"></i></div>
+                    <div class="brand-text"><h2>ICCT Cainta</h2><p>Room B2-A9</p></div>
+                </div>
+                <button class="sidebar-toggle-btn" id="closeSidebarBtn"><i class="fa-solid fa-bars"></i></button>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item fade-in-up delay-1"><i class="fa-solid fa-border-all"></i><span>Dashboard</span></a>
+                <a href="student.html" class="nav-item active fade-in-up delay-2"><i class="fa-solid fa-users"></i><span>Student</span></a>
+                <a href="session.html" class="nav-item fade-in-up delay-3"><i class="fa-solid fa-calendar-days"></i><span>Session</span></a>
+                <a href="analytics.html" class="nav-item fade-in-up delay-4"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></a>
+            </nav>
+            <a href="#" class="nav-item logout-btn fade-in-up delay-4"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Log out</span></a>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header fade-in-up" style="justify-content: flex-start; gap: 20px;">
+                <button class="mobile-menu-btn" id="openSidebarBtn" style="margin-right: 5px;"><i class="fa-solid fa-bars"></i></button>
+                <button onclick="window.history.back()" style="background: white; color: var(--text-dark); border: 1px solid #e2e8f0; width: 44px; height: 44px; border-radius: 12px; cursor: pointer; transition: var(--transition); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-arrow-left"></i></button>
+                <div>
+                    <h1 id="profileNameHeader" style="font-size: 1.6rem; letter-spacing: -0.02em;">Loading Profile...</h1>
+                    <p style="font-weight: 600;" id="profileSetHeader">-</p>
+                </div>
+            </header>
+
+            <div class="profile-grid" style="display: grid; grid-template-columns: 380px 1fr; gap: 30px;">
+                
+                <div class="card fade-in-up delay-1" style="text-align: center; padding: 40px 30px;">
+                    <h3 style="margin-bottom: 25px;">Student Profile</h3>
+                    <div style="background: var(--sidebar-bg); color: white; border-radius: 24px; padding: 35px 20px; margin-bottom: 30px; box-shadow: 0 15px 30px rgba(15, 23, 42, 0.2);">
+                        <div style="width: 86px; height: 86px; background: white; border-radius: 50%; margin: 0 auto 20px; display: flex; justify-content: center; align-items: center; color: var(--sidebar-bg); font-size: 2.5rem; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <h2 id="profileCardName" style="font-size: 1.3rem; margin-bottom: 8px; font-weight: 800; letter-spacing: -0.02em;">-</h2>
+                        <p id="profileCardId" style="color: #94a3b8; font-size: 0.85rem; letter-spacing: 0.05em; font-family: monospace;">-</p>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 20px; text-align: left; font-size: 0.95rem;">
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;"><span style="color: var(--text-muted); font-weight: 600;">Course</span> <span id="profileCourse" style="font-weight: 700; color: var(--text-dark);">...</span></div>
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;"><span style="color: var(--text-muted); font-weight: 600;">Year</span> <span id="profileYear" style="font-weight: 700; color: var(--text-dark);">...</span></div>
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;"><span style="color: var(--text-muted); font-weight: 600;">RFID Tag</span> <span id="profileRfid" style="font-weight: 700; color: var(--text-dark); font-family: monospace;">...</span></div>
+                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted); font-weight: 600;">Registered</span> <span id="profileRegDate" style="font-weight: 700; color: var(--text-dark);">...</span></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 30px;">
+                    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                        <div class="card card-hover fade-in-up delay-2" style="flex: 1; min-width: 180px; text-align: center; padding: 35px;">
+                            <div style="width: 60px; height: 60px; background: var(--color-green-light); color: var(--color-green); border-radius: 16px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; margin: 0 auto 20px;">
+                                <i class="fa-solid fa-user-check"></i>
+                            </div>
+                            <h2 id="profilePresentCount" style="font-size: 2.8rem; color: var(--text-dark); font-weight: 800; letter-spacing: -0.03em;">0</h2>
+                            <p style="color: var(--text-muted); font-weight: 600; font-size: 0.95rem; margin-top: 5px;">Present Classes</p>
+                        </div>
+                        <div class="card card-hover fade-in-up delay-3" style="flex: 1; min-width: 180px; text-align: center; padding: 35px;">
+                            <div style="width: 60px; height: 60px; background: var(--color-red-light); color: var(--color-red); border-radius: 16px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; margin: 0 auto 20px;">
+                                <i class="fa-solid fa-user-xmark"></i>
+                            </div>
+                            <h2 id="profileAbsentCount" style="font-size: 2.8rem; color: var(--text-dark); font-weight: 800; letter-spacing: -0.03em;">0</h2>
+                            <p style="color: var(--text-muted); font-weight: 600; font-size: 0.95rem; margin-top: 5px;">Missed Classes</p>
+                        </div>
+                    </div>
+
+                    <div class="card fade-in-up delay-4 table-container" style="flex: 1; padding: 0;">
+                        <div style="padding: 25px 30px; border-bottom: 1px solid #f1f5f9;">
+                            <h3 style="margin: 0;">Attendance History</h3>
+                        </div>
+                        <table style="margin-top: 10px;">
+                            <thead>
+                                <tr><th>Date</th><th>Session/Subject</th><th>Time Scanned</th><th>Status</th></tr>
+                            </thead>
+                            <tbody id="profileHistoryTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

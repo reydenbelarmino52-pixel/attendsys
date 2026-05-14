@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AttendSys - Analytics</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand fade-in-up">
+                <div class="brand-wrapper">
+                    <div class="brand-logo"><i class="fa-solid fa-book-open-reader"></i></div>
+                    <div class="brand-text"><h2>ICCT Cainta</h2><p>Room B2-A9</p></div>
+                </div>
+                <button class="sidebar-toggle-btn" id="closeSidebarBtn"><i class="fa-solid fa-bars"></i></button>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item fade-in-up delay-1"><i class="fa-solid fa-border-all"></i><span>Dashboard</span></a>
+                <a href="student.html" class="nav-item fade-in-up delay-2"><i class="fa-solid fa-users"></i><span>Student</span></a>
+                <a href="session.html" class="nav-item fade-in-up delay-3"><i class="fa-solid fa-calendar-days"></i><span>Session</span></a>
+                <a href="analytics.html" class="nav-item fade-in-up delay-4"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></a>
+            </nav>
+            <a href="#" class="nav-item logout-btn fade-in-up delay-4"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Log out</span></a>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header fade-in-up">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <button class="mobile-menu-btn" id="openSidebarBtn"><i class="fa-solid fa-bars"></i></button>
+                    <div>
+                        <h1>Analytics & Reports</h1>
+                        <p>Monthly attendance trends and historical data export.</p>
+                    </div>
+                </div>
+                <button class="btn-primary" style="background: white; border: 1px solid #e2e8f0; color: var(--text-dark); box-shadow: var(--shadow-sm);">
+                    <i class="fa-solid fa-download"></i> Export CSV
+                </button>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card card-hover fade-in-up delay-1">
+                    <div class="stat-header">
+                        <span class="stat-title">Average Attendance</span>
+                        <div class="stat-icon bg-green-light text-green"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                    </div>
+                    <h2 id="statAvgAtt">0%</h2>
+                </div>
+                <div class="stat-card card-hover fade-in-up delay-2">
+                    <div class="stat-header">
+                        <span class="stat-title">Perfect Attendees</span>
+                        <div class="stat-icon bg-primary-light text-primary" style="background: var(--color-primary-light); color: var(--color-primary);"><i class="fa-solid fa-medal"></i></div>
+                    </div>
+                    <h2 id="statPerfect">0</h2>
+                </div>
+                <div class="stat-card card-hover fade-in-up delay-3">
+                    <div class="stat-header">
+                        <span class="stat-title">At Risk (High Absences)</span>
+                        <div class="stat-icon bg-red-light text-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    </div>
+                    <h2 class="text-red" id="statAtRisk">0</h2>
+                </div>
+            </div>
+
+            <div class="analytics-grid">
+                <div class="card card-hover fade-in-up delay-4" style="min-height: 400px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                    <div style="font-size: 3rem; color: #cbd5e1; margin-bottom: 20px;"><i class="fa-solid fa-chart-column"></i></div>
+                    <h2 style="color: var(--text-dark); margin-bottom: 10px; font-weight: 800;">Detailed Charts Area</h2>
+                    <p style="color: var(--text-muted); max-width: 400px; line-height: 1.6;">Awaiting Database Connection for Trends.</p>
+                </div>
+
+                <div class="card card-hover fade-in-up delay-4 ai-card" style="display: flex; flex-direction: column;">
+                    <div class="stat-header" style="margin-bottom: 25px;">
+                        <span class="stat-title" style="color: #8b5cf6; font-weight: 800; display: flex; align-items: center; gap: 10px; font-size: 1rem;">
+                            <div style="width: 36px; height: 36px; background: rgba(139, 92, 246, 0.1); border-radius: 10px; display: flex; justify-content: center; align-items: center;">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                            AI Insight
+                        </span>
+                        <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">Beta Feature</span>
+                    </div>
+                    <h3 style="font-size: 1.3rem; margin-bottom: 15px; font-weight: 800; position: relative; z-index: 2; letter-spacing: -0.02em;">Smart Attendance Analysis</h3>
+                    <div style="flex: 1; display: flex; align-items: start; position: relative; z-index: 2;">
+                        <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 25px;" id="aiInsightText">
+                            Click generate to analyze this month's attendance patterns, discover hidden trends, and identify at-risk students automatically using AI logic.
+                        </p>
+                    </div>
+                    <button class="btn-primary ai-btn" id="generateAiBtn" style="width: 100%; justify-content: center; margin-top: auto; position: relative; z-index: 2; font-size: 1rem; padding: 14px;">
+                        <i class="fa-solid fa-sparkles"></i> Generate Report
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
