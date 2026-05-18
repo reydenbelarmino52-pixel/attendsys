@@ -7,6 +7,62 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* Modern Proportions for the bottom grid */
+        .analytics-grid {
+            display: grid; 
+            grid-template-columns: 2fr 1fr; /* Chart takes 2/3, Summary takes 1/3 */
+            gap: 25px;
+        }
+
+        /* Premium AI Input Field */
+        .ai-search-bar {
+            background: white; 
+            border: 1px solid #d8b4fe; 
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.08);
+            transition: all 0.3s ease;
+        }
+        .ai-search-bar:focus-within {
+            border-color: #a855f7;
+            box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15);
+        }
+
+        /* Sleek AI Response Chat Bubble */
+        #askDataResponse {
+            background: white;
+            border: 1px solid #e9d5ff;
+            border-left: 4px solid #8b5cf6;
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-top: 20px;
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.05);
+            color: var(--text-dark);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            display: none; /* Hidden by default */
+        }
+        
+        /* Animated Gradient Button */
+        .btn-ai-glow {
+            background: linear-gradient(135deg, #8b5cf6, #c026d3);
+            background-size: 200% auto;
+            color: white;
+            border: none;
+            transition: 0.5s;
+            box-shadow: 0 4px 15px rgba(192, 38, 211, 0.25);
+        }
+        .btn-ai-glow:hover {
+            background-position: right center;
+            box-shadow: 0 8px 25px rgba(192, 38, 211, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Mobile Fix */
+        @media (max-width: 1024px) {
+            .analytics-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
     <div class="app-layout">
@@ -22,7 +78,7 @@
                 <a href="dashboard.html" class="nav-item fade-in-up delay-1"><i class="fa-solid fa-border-all"></i><span>Dashboard</span></a>
                 <a href="student.html" class="nav-item fade-in-up delay-2"><i class="fa-solid fa-users"></i><span>Student</span></a>
                 <a href="session.html" class="nav-item fade-in-up delay-3"><i class="fa-solid fa-calendar-days"></i><span>Session</span></a>
-                <a href="analytics.html" class="nav-item fade-in-up delay-4"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></a>
+                <a href="analytics.html" class="nav-item fade-in-up delay-4 active"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></a>
             </nav>
             <a href="#" class="nav-item logout-btn fade-in-up delay-4"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Log out</span></a>
         </aside>
@@ -33,11 +89,11 @@
                     <button class="mobile-menu-btn" id="openSidebarBtn"><i class="fa-solid fa-bars"></i></button>
                     <div>
                         <h1>Analytics & Reports</h1>
-                        <p>Monthly attendance trends and historical data export.</p>
+                        <p>Analyze trends, identify at-risk students, and generate AI insights.</p>
                     </div>
                 </div>
                 <button class="btn-primary" style="background: white; border: 1px solid #e2e8f0; color: var(--text-dark); box-shadow: var(--shadow-sm);">
-                    <i class="fa-solid fa-download"></i> Export CSV
+                    <i class="fa-solid fa-file-csv" style="color: var(--color-primary);"></i> Export CSV
                 </button>
             </header>
 
@@ -65,33 +121,67 @@
                 </div>
             </div>
 
+            <div class="card card-hover fade-in-up delay-4" style="margin-bottom: 25px; background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%); border: 1px solid #e9d5ff;">
+                <div class="stat-header" style="margin-bottom: 5px;">
+                    <span class="stat-title" style="color: var(--text-dark); font-weight: 800; display: flex; align-items: center; gap: 12px; font-size: 1.15rem;">
+                        <div style="width: 38px; height: 38px; background: #f3e8ff; color: #9333ea; border-radius: 12px; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 8px rgba(147, 51, 234, 0.15);">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        Ask Your Data
+                    </span>
+                    <span class="badge" style="background: #f3e8ff; color: #9333ea; font-size: 0.7rem;">Powered by Groq LPUs</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 18px; margin-left: 50px;">Use natural language to instantly query student attendance records and metrics.</p>
+                
+                <div style="display: flex; gap: 12px; margin-left: 50px;">
+                    <div class="search-bar ai-search-bar" style="margin: 0; max-width: 100%; flex: 1; border-radius: 12px;">
+                        <i class="fa-solid fa-sparkles" style="color: #a855f7;"></i>
+                        <input type="text" id="askDataInput" placeholder="e.g. Based on the data, what should I focus on this week?" style="color: var(--text-dark);">
+                    </div>
+                    <button class="btn-primary btn-ai-glow" id="askDataBtn" style="padding: 0 25px;"><i class="fa-solid fa-paper-plane"></i> Ask AI</button>
+                </div>
+                
+                <div id="askDataResponse" style="margin-left: 50px;">
+                    </div>
+            </div>
+
             <div class="analytics-grid">
-                <div class="card card-hover fade-in-up delay-4" style="min-height: 400px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-                    <div style="font-size: 3rem; color: #cbd5e1; margin-bottom: 20px;"><i class="fa-solid fa-chart-column"></i></div>
-                    <h2 style="color: var(--text-dark); margin-bottom: 10px; font-weight: 800;">Detailed Charts Area</h2>
-                    <p style="color: var(--text-muted); max-width: 400px; line-height: 1.6;">Awaiting Database Connection for Trends.</p>
+                
+                <div class="card card-hover fade-in-up delay-4">
+                    <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin:0; font-size: 1.2rem; font-weight: 800;">Attendance Trends <span style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem;">(Last 7 Sessions)</span></h3>
+                        <div style="width: 36px; height: 36px; background: var(--bg-main); border-radius: 10px; display: flex; justify-content: center; align-items: center; color: var(--text-muted);"><i class="fa-solid fa-chart-simple"></i></div>
+                    </div>
+                    <div style="position: relative; height: 320px; width: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column;" id="chartEmptyState">
+                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px;"></i>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Loading visualization...</p>
+                    </div>
+                    <canvas id="attendanceChart" style="display: none;"></canvas>
                 </div>
 
-                <div class="card card-hover fade-in-up delay-4 ai-card" style="display: flex; flex-direction: column;">
-                    <div class="stat-header" style="margin-bottom: 25px;">
-                        <span class="stat-title" style="color: #8b5cf6; font-weight: 800; display: flex; align-items: center; gap: 10px; font-size: 1rem;">
-                            <div style="width: 36px; height: 36px; background: rgba(139, 92, 246, 0.1); border-radius: 10px; display: flex; justify-content: center; align-items: center;">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <div class="card card-hover fade-in-up delay-4 ai-card" style="display: flex; flex-direction: column; background: #ffffff; border: 1px solid #e2e8f0; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+                    
+                    <div class="stat-header" style="margin-bottom: 20px; position: relative; z-index: 2;">
+                        <span class="stat-title" style="color: var(--text-dark); font-weight: 800; display: flex; align-items: center; gap: 10px; font-size: 1.05rem;">
+                            <div style="width: 32px; height: 32px; background: var(--text-dark); color: white; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 0.85rem;">
+                                <i class="fa-solid fa-file-contract"></i>
                             </div>
-                            AI Insight
+                            Executive Summary
                         </span>
-                        <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">Beta Feature</span>
                     </div>
-                    <h3 style="font-size: 1.3rem; margin-bottom: 15px; font-weight: 800; position: relative; z-index: 2; letter-spacing: -0.02em;">Smart Attendance Analysis</h3>
-                    <div style="flex: 1; display: flex; align-items: start; position: relative; z-index: 2;">
-                        <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 25px;" id="aiInsightText">
-                            Click generate to analyze this month's attendance patterns, discover hidden trends, and identify at-risk students automatically using AI logic.
+                    
+                    <div style="flex: 1; display: flex; align-items: start; position: relative; z-index: 2; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #f1f5f9; margin-bottom: 20px;">
+                        <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.7;" id="aiInsightText">
+                            Click below to have Groq analyze your raw attendance database and write a highly professional executive summary for the administration.
                         </p>
                     </div>
-                    <button class="btn-primary ai-btn" id="generateAiBtn" style="width: 100%; justify-content: center; margin-top: auto; position: relative; z-index: 2; font-size: 1rem; padding: 14px;">
-                        <i class="fa-solid fa-sparkles"></i> Generate Report
+                    
+                    <button class="btn-primary btn-ai-glow" id="generateAiBtn" style="width: 100%; justify-content: center; position: relative; z-index: 2; font-size: 0.95rem; padding: 14px;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI Report
                     </button>
                 </div>
+
             </div>
         </main>
     </div>
