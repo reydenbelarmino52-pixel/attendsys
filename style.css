@@ -153,3 +153,60 @@ tbody tr:hover { background-color: #f8fafc; transform: scale(1.001); }
 .btn-icon.edit:hover { background: #eab308; color: white; transform: translateY(-2px); }
 .btn-icon.delete { background: var(--color-red-light); color: var(--color-red); }
 .btn-icon.delete:hover { background: var(--color-red); color: white; transform: translateY(-2px); }
+
+/* =======================================================
+   --- Responsiveness & Mobile Fixes --- 
+   ======================================================= */
+
+/* Medium screens (Tablets) */
+@media (max-width: 1024px) { 
+    .dashboard-grid, .analytics-grid, .profile-grid { 
+        grid-template-columns: 1fr !important; 
+    } 
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Small screens (Phones) */
+@media (max-width: 768px) {
+    /* Sidebar Mobile Drawer */
+    .sidebar { transform: translateX(-100%); z-index: 1000; }
+    .sidebar.open { transform: translateX(0); box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
+    .main-content { margin-left: 0; padding: 20px 15px; }
+    .mobile-menu-btn { display: block; }
+    
+    /* Page Headers */
+    .page-header { flex-direction: column; align-items: stretch !important; gap: 15px !important; }
+    .page-header > div:first-child { width: 100%; display: flex; align-items: center; gap: 15px; }
+    .page-header .btn-primary { width: 100%; justify-content: center; }
+    .sub-header-info { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+
+    /* Modals - Fix squished 2-column forms */
+    .modal-card { padding: 25px 20px; width: 90%; max-height: 90vh; overflow-y: auto; margin: 20px; }
+    .modal-card div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; gap: 15px !important; }
+    .modal-actions { flex-direction: column; gap: 10px; }
+    .modal-actions button { width: 100%; }
+
+    /* Stats Grid */
+    .stats-grid { grid-template-columns: 1fr; gap: 15px; }
+
+    /* Table & Search Header */
+    .table-container { padding: 10px; }
+    .table-container > div:first-child { flex-direction: column; align-items: flex-start; gap: 15px; }
+    .search-bar { max-width: 100%; }
+    
+    /* Profile specific */
+    .profile-grid > div > div[style*="flex-wrap: wrap"] { flex-direction: column; }
+    
+    /* Session detail action header */
+    #detailSessionTitle { font-size: 1.2rem; }
+}
+
+/* Extra Small screens (Narrow Phones) */
+@media (max-width: 480px) {
+    .card { padding: 20px 15px; }
+    .stat-card { padding: 20px 15px; }
+    .stat-card h2 { font-size: 1.8rem; }
+    td, th { padding: 12px 10px; font-size: 0.85rem; }
+}

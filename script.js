@@ -4,29 +4,20 @@
 let isAuthenticated = false;
 let userAccessToken = null;
 
-// Dynamically find the Supabase auth token (prevents infinite loop bug)
 for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
         isAuthenticated = true;
         try {
-            // Extract the actual secure JWT token for database requests
             const sessionData = JSON.parse(localStorage.getItem(key));
-            if (sessionData && sessionData.access_token) {
-                userAccessToken = sessionData.access_token;
-            }
+            if (sessionData && sessionData.access_token) userAccessToken = sessionData.access_token;
         } catch(e) {}
         break;
     }
 }
 
-// Allow being on the login page or root path
 const isLoginPage = window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/');
-
-// Kick out if not logged in
-if (!isAuthenticated && !isLoginPage) {
-    window.location.replace('index.html');
-}
+if (!isAuthenticated && !isLoginPage) window.location.replace('index.html');
 
 // ==========================================
 // 1. API CONFIGURATION & STATE
@@ -42,11 +33,15 @@ let dashboardScansList = [];
 let currentPage = 1;
 const rowsPerPage = 10;
 
+// --- NEW STATE VARIABLES FOR SEARCH ---
+let currentSearchTerm = "";
+let currentSessionLogs = [];
+let currentSessionSearchTerm = "";
+
 async function fetchSupabase(endpoint, options = {}) {
     const headers = {
         'Content-Type': 'application/json',
         'apikey': CONFIG.SUPABASE_KEY,
-        // Use the authenticated user token if available, otherwise fallback to anon key
         'Authorization': `Bearer ${userAccessToken || CONFIG.SUPABASE_KEY}`,
         'Prefer': 'return=representation'
     };
@@ -54,6 +49,28 @@ async function fetchSupabase(endpoint, options = {}) {
     if (!response.ok) throw new Error('Supabase Request Failed');
     if (options.method === 'DELETE' || options.method === 'PATCH') return true; 
     return await response.json();
+}
+
+// ==========================================
+// 1.5 STRICT TIME & DATE CHECKER 
+// ==========================================
+function isLogWithinSession(logTimestamp, sessionDate, sessionTimeRange) {
+    if (!logTimestamp || !sessionDate || !sessionTimeRange) return false;
+    const logDate = new Date(logTimestamp);
+    const logDateString = logDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    if (logDateString !== sessionDate) return false;
+    
+    try {
+        let [startStr, endStr] = sessionTimeRange.split(' - ');
+        let parseTimeStr = (tStr) => {
+            let [time, modifier] = tStr.trim().split(' '); let [hours, minutes] = time.split(':');
+            hours = parseInt(hours, 10);
+            if (hours === 12 && modifier.toUpperCase() === 'AM') hours = 0;
+            if (hours < 12 && modifier.toUpperCase() === 'PM') hours += 12;
+            let d = new Date(logDate); d.setHours(hours, parseInt(minutes, 10), 0, 0); return d;
+        };
+        return logDate >= parseTimeStr(startStr) && logDate <= parseTimeStr(endStr);
+    } catch (e) { return false; }
 }
 
 // ==========================================
@@ -78,7 +95,8 @@ function showToast(message, type = 'success') {
 // ==========================================
 async function loadStudents() {
     try {
-        const data = await fetchSupabase('/students?select=*&order=registered_at.desc');
+        // FIX: Changed order=registered_at.desc to order=name.asc for Alphabetical sorting
+        const data = await fetchSupabase('/students?select=*&order=name.asc');
         studentDataList = data || []; renderStudentTable();
     } catch (error) { console.error(error); }
 }
@@ -86,7 +104,17 @@ async function loadStudents() {
 async function loadSessions() {
     try {
         const data = await fetchSupabase('/sessions?select=*&order=created_at.desc');
-        sessionDataList = data || []; renderSessionTable();
+        sessionDataList = data || []; 
+
+        const logsData = await fetchSupabase('/attendance_logs?select=scanned_at');
+        const logs = logsData || [];
+        
+        sessionDataList.forEach(session => {
+            const sessionLogs = logs.filter(log => isLogWithinSession(log.scanned_at, session.date, session.time_range));
+            session.attendance_count = sessionLogs.length; 
+        });
+
+        renderSessionTable();
     } catch (error) { console.error(error); }
 }
 
@@ -105,26 +133,9 @@ async function checkActiveSessions() {
     try {
         const stateData = await fetchSupabase('/device_state?id=eq.1&select=current_mode');
         if (stateData && stateData.length > 0 && stateData[0].current_mode === 'enroll') return;
-
-        let hasActive = false;
-        const now = new Date();
-        const todayStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-        for (let s of sessionDataList) {
-            if (s.date === todayStr) {
-                try {
-                    let [startStr, endStr] = s.time_range.split(' - ');
-                    let parseTimeStr = (tStr) => {
-                        let [time, modifier] = tStr.trim().split(' '); let [hours, minutes] = time.split(':');
-                        hours = parseInt(hours, 10);
-                        if (hours === 12 && modifier.toUpperCase() === 'AM') hours = 0;
-                        if (hours < 12 && modifier.toUpperCase() === 'PM') hours += 12;
-                        let d = new Date(now); d.setHours(hours, parseInt(minutes, 10), 0, 0); return d;
-                    };
-                    if (now >= parseTimeStr(startStr) && now <= parseTimeStr(endStr)) { hasActive = true; break; }
-                } catch (err) {}
-            }
-        }
+        let hasActive = false; const nowIso = new Date().toISOString();
+        for (let s of sessionDataList) { if (isLogWithinSession(nowIso, s.date, s.time_range)) { hasActive = true; break; } }
+        
         const targetMode = hasActive ? 'scan' : 'standby';
         if (stateData && stateData[0].current_mode !== targetMode) {
             await fetchSupabase('/device_state?id=eq.1', { method: 'PATCH', body: JSON.stringify({ current_mode: targetMode }) });
@@ -136,7 +147,6 @@ async function checkActiveSessions() {
 // 5. STUDENT CRUD (Create, Edit, Delete)
 // ==========================================
 let enrollPollInterval;
-
 window.openStudentModal = async function() {
     const modal = document.getElementById('createStudentModal'); if(modal) modal.classList.add('active');
     document.getElementById('newStudentRfid').value = "Waiting for card tap..."; document.getElementById('newStudentRfid').disabled = true;
@@ -234,7 +244,7 @@ window.updateStudent = async function() {
 }
 
 // ==========================================
-// 6. SESSION CRUD (Create, Edit, Delete)
+// 6. SESSION CRUD 
 // ==========================================
 window.openSessionModal = function() { document.getElementById('createSessionModal')?.classList.add('active'); }
 window.closeSessionModal = function() { document.getElementById('createSessionModal')?.classList.remove('active'); }
@@ -308,13 +318,7 @@ function renderSessionTable() {
         const iconBg = i % 2 === 0 ? 'var(--color-red-light)' : 'var(--color-primary-light)';
         const iconColor = i % 2 === 0 ? 'var(--color-red)' : 'var(--color-primary)';
         
-        let isActive = false;
-        if(s.date === new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })) {
-             let [startStr, endStr] = s.time_range.split(' - '); let now = new Date();
-             let startTime = new Date(now); startTime.setHours(...parseToTimeInput(startStr).split(':'), 0);
-             let endTime = new Date(now); endTime.setHours(...parseToTimeInput(endStr).split(':'), 0);
-             if(now >= startTime && now <= endTime) isActive = true;
-        }
+        let isActive = isLogWithinSession(new Date().toISOString(), s.date, s.time_range);
         const activeBadge = isActive ? `<span class="badge badge-present" style="margin-left: 10px; font-size: 0.65rem;">LIVE</span>` : '';
 
         sessionTable.innerHTML += `
@@ -344,14 +348,29 @@ function renderSessionTable() {
 function renderStudentTable() {
     const studentTable = document.getElementById('studentTableBody'); if (!studentTable) return;
     studentTable.innerHTML = '';
-    if (studentDataList.length === 0) {
-        studentTable.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">No students found.</td></tr>`;
-        if(document.getElementById('studentCountLabel')) document.getElementById('studentCountLabel').innerText = "0 Results Found"; return;
+    
+    // FIX: Apply dynamic search filter
+    const filteredList = studentDataList.filter(s => {
+        if (!currentSearchTerm) return true;
+        const term = currentSearchTerm.toLowerCase();
+        return (s.name && s.name.toLowerCase().includes(term)) ||
+               (s.student_id && s.student_id.toLowerCase().includes(term)) ||
+               (s.rfid_tag && s.rfid_tag.toLowerCase().includes(term));
+    });
+
+    if (filteredList.length === 0) {
+        studentTable.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">No students found matching "${currentSearchTerm}".</td></tr>`;
+        if(document.getElementById('studentCountLabel')) document.getElementById('studentCountLabel').innerText = "0 Results Found"; 
+        
+        const paginationContainer = document.getElementById('paginationControls');
+        if (paginationContainer) paginationContainer.innerHTML = '';
+        return;
     }
-    if(document.getElementById('studentCountLabel')) document.getElementById('studentCountLabel').innerText = `${studentDataList.length} Results Found`;
+    
+    if(document.getElementById('studentCountLabel')) document.getElementById('studentCountLabel').innerText = `${filteredList.length} Results Found`;
 
     const start = (currentPage - 1) * rowsPerPage;
-    const paginatedItems = studentDataList.slice(start, start + rowsPerPage);
+    const paginatedItems = filteredList.slice(start, start + rowsPerPage);
 
     paginatedItems.forEach((s, i) => {
         const avatarHtml = s.image_url 
@@ -376,8 +395,23 @@ function renderStudentTable() {
             </tr>
         `;
     });
-    renderPaginationControls();
+    
+    // Pass filtered length to calculate accurate pagination
+    renderPaginationControls(filteredList.length);
 }
+
+function renderPaginationControls(totalItems) {
+    const tableContainer = document.getElementById('paginationControls'); 
+    if (!tableContainer || totalItems === 0) return;
+    
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    tableContainer.innerHTML = `
+        <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+        <button class="btn-view" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(-1)">Previous</button>
+        <button class="btn-view" ${currentPage >= totalPages ? 'disabled' : ''} onclick="changePage(1)">Next</button>
+    `;
+}
+window.changePage = function(direction) { currentPage += direction; renderStudentTable(); }
 
 function renderDashboardScans() {
     const scanList = document.getElementById('scanList'); if (!scanList) return;
@@ -398,18 +432,6 @@ function renderDashboardScans() {
     });
 }
 
-function renderPaginationControls() {
-    const tableContainer = document.getElementById('paginationControls'); if (!tableContainer || studentDataList.length === 0) return;
-    const totalPages = Math.ceil(studentDataList.length / rowsPerPage);
-    tableContainer.innerHTML = `
-        <span class="page-info">Page ${currentPage} of ${totalPages}</span>
-        <button class="btn-view" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(-1)">Previous</button>
-        <button class="btn-view" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(1)">Next</button>
-    `;
-}
-
-window.changePage = function(direction) { currentPage += direction; renderStudentTable(); }
-
 // ==========================================
 // 8. PAGE SPECIFIC LOGIC (Profile & Sessions)
 // ==========================================
@@ -423,27 +445,47 @@ async function loadSessionDetails() {
         document.getElementById('detailSessionTitle').innerText = session.subject || 'Unknown Subject'; document.getElementById('detailSessionDate').innerText = session.date || '-'; document.getElementById('detailSessionTime').innerText = session.time_range || '-'; document.getElementById('detailSessionLoc').innerText = session.location || '-';
 
         const logsData = await fetchSupabase('/attendance_logs?select=*,students(*)&order=scanned_at.desc');
-        const sessionLogs = logsData.filter(log => new Date(log.scanned_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) === session.date);
+        
+        // Save globally for search
+        currentSessionLogs = logsData.filter(log => isLogWithinSession(log.scanned_at, session.date, session.time_range));
 
-        document.getElementById('detailTotal').innerText = sessionLogs.length; document.getElementById('detailPresent').innerText = sessionLogs.length;
+        document.getElementById('detailTotal').innerText = currentSessionLogs.length; 
+        document.getElementById('detailPresent').innerText = currentSessionLogs.length;
 
-        const tbody = document.getElementById('sessionDetailTableBody'); tbody.innerHTML = '';
-        if (sessionLogs.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-muted);">No attendees recorded.</td></tr>`; } 
-        else {
-            sessionLogs.forEach(log => {
-                const student = log.students || {};
-                const avatar = student.image_url ? `<img src="${student.image_url}" style="width: 36px; height: 36px; border-radius: 10px; object-fit: cover;">` : `<div class="avatar" style="width: 36px; height: 36px; font-size: 1rem;">${student.name ? student.name.charAt(0) : '?'}</div>`;
-                tbody.innerHTML += `
-                    <tr class="fade-in-up" onclick="window.location.href='student-profile.html?id=${student.student_id}'" style="cursor: pointer;">
-                        <td><div class="student-info">${avatar}<div><p style="font-weight: 700; color: var(--text-dark);">${student.name || 'Unknown'}</p><p style="font-size: 0.8rem; color: var(--text-muted);">${student.student_id || 'No ID'}</p></div></div></td>
-                        <td><strong>${student.course || '-'}</strong> &bull; ${student.year || '-'}</td>
-                        <td><span class="badge badge-present">${log.status || 'Present'}</span></td>
-                        <td>${new Date(log.scanned_at).toLocaleTimeString()}</td>
-                    </tr>
-                `;
-            });
-        }
+        renderSessionDetailsTable();
     } catch (error) { console.error(error); }
+}
+
+// FIX: New extracted function to render session table so it can be searched live
+function renderSessionDetailsTable() {
+    const tbody = document.getElementById('sessionDetailTableBody'); if(!tbody) return;
+    tbody.innerHTML = '';
+    
+    const filteredLogs = currentSessionLogs.filter(log => {
+        if (!currentSessionSearchTerm) return true;
+        const term = currentSessionSearchTerm.toLowerCase();
+        const student = log.students || {};
+        return (student.name && student.name.toLowerCase().includes(term)) ||
+               (student.student_id && student.student_id.toLowerCase().includes(term)) ||
+               (log.rfid_tag && log.rfid_tag.toLowerCase().includes(term));
+    });
+
+    if (filteredLogs.length === 0) { 
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-muted);">No attendees found matching search.</td></tr>`; 
+    } else {
+        filteredLogs.forEach(log => {
+            const student = log.students || {};
+            const avatar = student.image_url ? `<img src="${student.image_url}" style="width: 36px; height: 36px; border-radius: 10px; object-fit: cover;">` : `<div class="avatar" style="width: 36px; height: 36px; font-size: 1rem;">${student.name ? student.name.charAt(0) : '?'}</div>`;
+            tbody.innerHTML += `
+                <tr class="fade-in-up" onclick="window.location.href='student-profile.html?id=${student.student_id}'" style="cursor: pointer;">
+                    <td><div class="student-info">${avatar}<div><p style="font-weight: 700; color: var(--text-dark);">${student.name || 'Unknown'}</p><p style="font-size: 0.8rem; color: var(--text-muted);">${student.student_id || 'No ID'}</p></div></div></td>
+                    <td><strong>${student.course || '-'}</strong> &bull; ${student.year || '-'}</td>
+                    <td><span class="badge badge-present">${log.status || 'Present'}</span></td>
+                    <td>${new Date(log.scanned_at).toLocaleTimeString()}</td>
+                </tr>
+            `;
+        });
+    }
 }
 
 async function loadStudentProfile() {
@@ -479,7 +521,7 @@ async function loadStudentProfile() {
 }
 
 // ==========================================
-// 9. DASHBOARD ADVANCED ENGINE
+// 9. DASHBOARD & ANALYTICS ENGINE
 // ==========================================
 async function loadDashboardLiveStats() {
     if (!document.getElementById('dashTotalStudents')) return;
@@ -508,9 +550,6 @@ async function loadDashboardLiveStats() {
     } catch (e) { console.error(e); }
 }
 
-// ==========================================
-// 10. ANALYTICS ADVANCED ENGINE
-// ==========================================
 async function loadAnalyticsData() {
     if (!document.getElementById('statAvgAtt')) return;
     try {
@@ -523,7 +562,7 @@ async function loadAnalyticsData() {
         students.forEach(s => studentAttendanceCount[s.rfid_tag] = 0);
 
         sessions.forEach(session => {
-            const sessionLogs = logs.filter(log => new Date(log.scanned_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) === session.date);
+            const sessionLogs = logs.filter(log => isLogWithinSession(log.scanned_at, session.date, session.time_range));
             const uniqueRFIDs = new Set(sessionLogs.map(l => l.rfid_tag)); presentCount += uniqueRFIDs.size;
             uniqueRFIDs.forEach(rfid => { if(studentAttendanceCount[rfid] !== undefined) studentAttendanceCount[rfid]++; });
         });
@@ -542,7 +581,7 @@ async function loadAnalyticsData() {
 
             recentSessions.forEach(session => {
                 labels.push(session.subject || session.date.substring(0, 5));
-                const sessionLogs = logs.filter(log => new Date(log.scanned_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) === session.date);
+                const sessionLogs = logs.filter(log => isLogWithinSession(log.scanned_at, session.date, session.time_range));
                 const uniquePresents = new Set(sessionLogs.map(l => l.rfid_tag)).size;
                 presentData.push(uniquePresents); absentData.push(Math.max(0, totalStudents - uniquePresents));
             });
@@ -563,19 +602,6 @@ async function loadAnalyticsData() {
                 link.setAttribute("href", url); link.setAttribute("download", `Attendance_Export.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
             });
         }
-
-        const generateAiBtn = document.getElementById('generateAiBtn');
-        if (generateAiBtn) {
-            generateAiBtn.addEventListener('click', () => {
-                generateAiBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing Data...'; generateAiBtn.disabled = true;
-                setTimeout(() => {
-                    const textEl = document.getElementById('aiInsightText');
-                    if (atRisk > 0) textEl.innerHTML = `<strong>Insight Generated:</strong><br><br>Warning: We detected <strong>${atRisk} student(s)</strong> at high risk of failure due to missing over 50% of classes. Immediate follow-up is recommended.`;
-                    else textEl.innerHTML = `<strong>Insight Generated:</strong><br><br>Attendance is optimal! There are currently no students identified as 'At Risk'. Engagement remains highly consistent.`;
-                    generateAiBtn.innerHTML = '<i class="fa-solid fa-check"></i> Analysis Complete';
-                }, 1500);
-            });
-        }
     } catch (e) { console.error("Analytics error", e); }
 }
 
@@ -590,31 +616,49 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('openSidebarBtn')?.addEventListener('click', () => sidebar.classList.add('open'));
     document.getElementById('closeSidebarBtn')?.addEventListener('click', () => { window.innerWidth <= 768 ? sidebar.classList.remove('open') : (sidebar.classList.toggle('collapsed'), mainContent?.classList.toggle('expanded')); });
 
-    // Handle Secure Logout (FIXED: Properly deletes Supabase token)
     document.querySelectorAll('.logout-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault(); 
             if(confirm("Are you sure you want to log out?")) {
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
-                    if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-                        localStorage.removeItem(key);
-                    }
+                    if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) localStorage.removeItem(key);
                 }
                 window.location.href = 'index.html'; 
             }
         });
     });
 
+    // FIX: ATTACH LIVE SEARCH EVENT LISTENERS
+    if (document.getElementById('studentTableBody')) {
+        loadStudents();
+        const searchInput = document.querySelector('.search-bar input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                currentSearchTerm = e.target.value;
+                currentPage = 1; // Reset to page 1 on new search
+                renderStudentTable();
+            });
+        }
+    }
+
+    if (currentLocation.includes('session-detail.html')) {
+        loadSessionDetails();
+        const searchInput = document.querySelector('.search-bar input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                currentSessionSearchTerm = e.target.value;
+                renderSessionDetailsTable();
+            });
+        }
+    }
+
     if (document.getElementById('sessionTableBody')) loadSessions();
-    if (document.getElementById('studentTableBody')) loadStudents();
     if (document.getElementById('scanList')) { loadDashboardScans(); setInterval(loadDashboardScans, 3000); }
     if (document.getElementById('dashTotalStudents')) { loadDashboardLiveStats(); setInterval(loadDashboardLiveStats, 10000); }
     if (document.getElementById('statAvgAtt')) loadAnalyticsData();
 
     setInterval(checkActiveSessions, 10000); 
     setTimeout(checkActiveSessions, 1000); 
-
-    if (currentLocation.includes('session-detail.html')) loadSessionDetails();
     if (currentLocation.includes('student-profile.html')) loadStudentProfile();
 });

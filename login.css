@@ -14,6 +14,8 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+/* Desktop Body is locked to prevent scrollbars during animation */
 body { height: 100vh; width: 100vw; overflow: hidden; background-color: var(--bg-main); color: var(--text-dark); -webkit-font-smoothing: antialiased; }
 
 /* --- Absolute Positioning for Slide Animation --- */
@@ -104,15 +106,10 @@ form.active-form { display: flex; opacity: 1; transform: translateY(0); }
 .glass-panel p { font-size: 1.1rem; font-weight: 400; line-height: 1.6; color: #cbd5e1; transition: all 0.3s ease; }
 
 /* =======================================================
-   THE SWAP ANIMATION 
+   THE SWAP ANIMATION (Desktop)
    ======================================================= */
-.split-screen.swapped .left-panel {
-    transform: translateX(100%);
-}
-
-.split-screen.swapped .right-panel {
-    transform: translateX(-100%);
-}
+.split-screen.swapped .left-panel { transform: translateX(100%); }
+.split-screen.swapped .right-panel { transform: translateX(-100%); }
 
 
 /* --- Toasts --- */
@@ -125,14 +122,80 @@ form.active-form { display: flex; opacity: 1; transform: translateY(0); }
 .toast.error .toast-icon { color: var(--color-red); }
 
 
-/* --- Mobile overrides (Disables slide on small screens) --- */
+/* =======================================================
+   MOBILE VIEW FIX (Fully Responsive)
+   ======================================================= */
 @media (max-width: 900px) {
-    .split-screen { display: flex; flex-direction: column-reverse; height: auto; min-height: 100vh; overflow: auto; }
-    .left-panel, .right-panel { position: relative; width: 100%; height: auto; transform: none !important; box-shadow: none; }
-    .right-panel { flex: none; padding: 30px 20px; }
-    .left-panel { flex: 1; padding: 40px 20px; }
-    .glass-panel { padding: 30px; text-align: center; border: none; box-shadow: none; background: transparent; backdrop-filter: none; }
-    .hero-icon { margin: 0 auto 15px; width: 40px; height: 40px; font-size: 1.2rem; }
-    .glass-panel h1 { font-size: 1.8rem; }
+    /* 1. Unlock Body Scrolling */
+    body { 
+        overflow-y: auto !important; 
+        overflow-x: hidden;
+        height: auto; 
+        min-height: 100vh; 
+    }
+
+    /* 2. Stack panels vertically */
+    .split-screen { 
+        display: flex; 
+        flex-direction: column-reverse; /* Puts Banner on top, Form on bottom */
+        height: auto; 
+        min-height: 100vh; 
+        overflow: visible; 
+    }
+
+    /* 3. Disable sliding animations and position absolute */
+    .left-panel, .right-panel { 
+        position: relative; 
+        width: 100%; 
+        height: auto; 
+        transform: none !important; 
+        box-shadow: none; 
+    }
+
+    /* 4. Banner (Top) */
+    .right-panel { 
+        flex: none; 
+        padding: 40px 20px 70px; /* Extra bottom padding so form overlaps smoothly */
+        z-index: 1;
+    }
+
+    /* 5. Form (Bottom) overlapping the banner */
+    .left-panel { 
+        flex: 1; 
+        padding: 0 20px 40px; 
+        margin-top: -50px; /* Pulls form up over the banner */
+        z-index: 2; 
+        background: transparent;
+    }
+
+    .form-wrapper {
+        background: white;
+        padding: 30px 25px;
+        border-radius: 24px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15); /* Adds a nice drop shadow card effect */
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    /* 6. Clean up text and elements for small screens */
+    .glass-panel { 
+        padding: 0; 
+        text-align: center; 
+        border: none; 
+        box-shadow: none; 
+        background: transparent; 
+        backdrop-filter: none; 
+    }
+    
+    .hero-icon { margin: 0 auto 15px; width: 45px; height: 45px; font-size: 1.3rem; }
+    .glass-panel h1 { font-size: 2.2rem; margin-bottom: 10px; }
     .glass-panel p { font-size: 0.95rem; }
+    
+    /* Hide blobs to prevent weird horizontal scroll issues on phones */
+    .blob { display: none; }
+}
+
+@media (max-width: 480px) {
+    .form-wrapper { padding: 25px 20px; }
+    .logo-container h2 { font-size: 1.3rem; }
 }
