@@ -50,7 +50,7 @@
                     <thead>
                         <tr>
                             <th>Student Info</th>
-                            <th>Course & Year</th>
+                            <th>Course, Year & Set</th>
                             <th>RFID Tag</th>
                             <th>Missed Classes</th>
                             <th>Registered</th>
@@ -85,13 +85,20 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group"><label>Student No.</label><input type="text" id="newStudentNo" placeholder="e.g. 2024-001" autocomplete="off"></div>
                 <div class="form-group">
-                    <label>Year Level</label>
-                    <select id="newStudentYear"><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select>
+                    <label>Set / Group</label>
+                    <select id="newStudentSet">
+                        <option value="A">Set A</option>
+                        <option value="B">Set B</option>
+                    </select>
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
                 <div class="form-group"><label>Course</label><input type="text" id="newStudentCourse" placeholder="e.g. BSIT" autocomplete="off"></div>
-                <div class="form-group"><label>RFID Tag (Required)</label><input type="text" id="newStudentRfid" placeholder="e.g. A1 B2 C3 D4" autocomplete="off"></div>
+                <div class="form-group">
+                    <label>Year</label>
+                    <select id="newStudentYear"><option value="1st Year">1st</option><option value="2nd Year">2nd</option><option value="3rd Year">3rd</option><option value="4th Year">4th</option></select>
+                </div>
+                <div class="form-group"><label>RFID Tag</label><input type="text" id="newStudentRfid" placeholder="Waiting..." autocomplete="off" disabled></div>
             </div>
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeStudentModal()">Cancel</button>
@@ -114,12 +121,19 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group"><label>Student No.</label><input type="text" id="editStudentNo" autocomplete="off"></div>
                 <div class="form-group">
-                    <label>Year Level</label>
-                    <select id="editStudentYear"><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select>
+                    <label>Set / Group</label>
+                    <select id="editStudentSet">
+                        <option value="A">Set A</option>
+                        <option value="B">Set B</option>
+                    </select>
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
                 <div class="form-group"><label>Course</label><input type="text" id="editStudentCourse" autocomplete="off"></div>
+                <div class="form-group">
+                    <label>Year</label>
+                    <select id="editStudentYear"><option value="1st Year">1st</option><option value="2nd Year">2nd</option><option value="3rd Year">3rd</option><option value="4th Year">4th</option></select>
+                </div>
                 <div class="form-group"><label>RFID Tag</label><input type="text" id="editStudentRfid" autocomplete="off"></div>
             </div>
             <div class="modal-actions">
