@@ -58,7 +58,7 @@ async function fetchSupabase(endpoint, options = {}) {
 async function callGroqAI(userPrompt, systemPrompt = "You are a helpful assistant.", requireJson = false) {
     try {
         const bodyPayload = {
-            model: "meta-llama/llama-4-scout-17b-16e-instruct", 
+            model: "openai/gpt-oss-120b", 
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
