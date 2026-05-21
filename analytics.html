@@ -9,59 +9,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
-        /* Modern Proportions for the bottom grid */
-        .analytics-grid {
-            display: grid; 
-            grid-template-columns: 2fr 1fr; /* Chart takes 2/3, Summary takes 1/3 */
-            gap: 25px;
-        }
-
-        /* Premium AI Input Field */
-        .ai-search-bar {
-            background: white; 
-            border: 1px solid #d8b4fe; 
-            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.08);
-            transition: all 0.3s ease;
-        }
-        .ai-search-bar:focus-within {
-            border-color: #a855f7;
-            box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15);
-        }
-
-        /* Sleek AI Response Chat Bubble */
-        #askDataResponse {
-            background: white;
-            border: 1px solid #e9d5ff;
-            border-left: 4px solid #8b5cf6;
-            border-radius: 12px;
-            padding: 20px 25px;
-            margin-top: 20px;
-            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.05);
-            color: var(--text-dark);
-            font-size: 0.95rem;
-            line-height: 1.7;
-            display: none; /* Hidden by default */
-        }
-        
-        /* Animated Gradient Button */
-        .btn-ai-glow {
-            background: linear-gradient(135deg, #8b5cf6, #c026d3);
-            background-size: 200% auto;
-            color: white;
-            border: none;
-            transition: 0.5s;
-            box-shadow: 0 4px 15px rgba(192, 38, 211, 0.25);
-        }
-        .btn-ai-glow:hover {
-            background-position: right center;
-            box-shadow: 0 8px 25px rgba(192, 38, 211, 0.4);
-            transform: translateY(-2px);
-        }
-
-        /* Mobile Fix */
-        @media (max-width: 1024px) {
-            .analytics-grid { grid-template-columns: 1fr; }
-        }
+        .analytics-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
+        .ai-search-bar { background: white; border: 1px solid #d8b4fe; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.08); transition: all 0.3s ease; }
+        .ai-search-bar:focus-within { border-color: #a855f7; box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15); }
+        #askDataResponse { background: white; border: 1px solid #e9d5ff; border-left: 4px solid #8b5cf6; border-radius: 12px; padding: 20px 25px; margin-top: 20px; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.05); color: var(--text-dark); font-size: 0.95rem; line-height: 1.7; display: none; }
+        .btn-ai-glow { background: linear-gradient(135deg, #8b5cf6, #c026d3); background-size: 200% auto; color: white; border: none; transition: 0.5s; box-shadow: 0 4px 15px rgba(192, 38, 211, 0.25); }
+        .btn-ai-glow:hover { background-position: right center; box-shadow: 0 8px 25px rgba(192, 38, 211, 0.4); transform: translateY(-2px); }
+        @media (max-width: 1024px) { .analytics-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -92,7 +46,7 @@
                         <p>Analyze trends, identify at-risk students, and generate AI insights.</p>
                     </div>
                 </div>
-                <button class="btn-primary" style="background: white; border: 1px solid #e2e8f0; color: var(--text-dark); box-shadow: var(--shadow-sm);">
+                <button id="exportGlobalCsvBtn" class="btn-primary" style="background: white; border: 1px solid #e2e8f0; color: var(--text-dark); box-shadow: var(--shadow-sm);">
                     <i class="fa-solid fa-file-csv" style="color: var(--color-primary);"></i> Export CSV
                 </button>
             </header>
@@ -141,8 +95,7 @@
                     <button class="btn-primary btn-ai-glow" id="askDataBtn" style="padding: 0 25px;"><i class="fa-solid fa-paper-plane"></i> Ask AI</button>
                 </div>
                 
-                <div id="askDataResponse" style="margin-left: 50px;">
-                    </div>
+                <div id="askDataResponse" style="margin-left: 50px;"></div>
             </div>
 
             <div class="analytics-grid">
