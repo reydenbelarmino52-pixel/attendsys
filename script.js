@@ -54,7 +54,7 @@ async function fetchSupabase(endpoint, options = {}) {
 async function callGroqAI(userPrompt, systemPrompt = "You are a helpful assistant.", requireJson = false) {
     try {
         const bodyPayload = {
-            model: "meta-llama/llama-4-scout-17b-16e-instruct", 
+            model: "meta-llama/llama-4-scout-17b-16e-instruct", // FIXED: Valid Groq model
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
@@ -64,15 +64,25 @@ async function callGroqAI(userPrompt, systemPrompt = "You are a helpful assistan
 
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': `Bearer ${GROQ_API_KEY}`, 
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify(bodyPayload)
         });
 
         const data = await response.json();
+        
+        // Catch API errors directly
+        if (!response.ok) {
+            console.error("Groq API Error:", data);
+            throw new Error(data.error?.message || "API Request Failed");
+        }
+
         return data.choices[0].message.content;
     } catch (error) {
-        console.error("Groq AI API Error:", error);
-        return null;
+        console.error("Groq AI Execution Error:", error);
+        return `<span style="color:red;">Error: ${error.message}</span>`;
     }
 }
 
@@ -360,35 +370,92 @@ function renderDashboardScans() {
 async function loadSessionDetails() {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('id'); if (!sessionId) return;
+    
     try {
         const sessionData = await fetchSupabase(`/sessions?id=eq.${sessionId}&select=*`);
         if (!sessionData || sessionData.length === 0) return;
+        
         const session = sessionData[0];
-        document.getElementById('detailSessionTitle').innerText = session.subject || 'Unknown Subject'; document.getElementById('detailSessionDate').innerText = session.date || '-'; document.getElementById('detailSessionTime').innerText = session.time_range || '-'; document.getElementById('detailSessionLoc').innerText = session.location || '-';
+        const sessionSetGroup = session.set_group || 'A'; 
+
+        document.getElementById('detailSessionTitle').innerText = session.subject || 'Unknown Subject'; 
+        document.getElementById('detailSessionDate').innerText = session.date || '-'; 
+        document.getElementById('detailSessionTime').innerText = session.time_range || '-'; 
+        document.getElementById('detailSessionLoc').innerText = session.location || '-';
+        
+        const allStudents = await fetchSupabase('/students?select=*');
+        const expectedStudents = allStudents.filter(s => s.set_group === sessionSetGroup);
+        const expectedCount = expectedStudents.length;
+
         const logsData = await fetchSupabase('/attendance_logs?select=*,students(*)&order=scanned_at.desc');
-        currentSessionLogs = logsData.filter(log => isLogWithinSession(log.scanned_at, session.date, session.time_range));
-        document.getElementById('detailTotal').innerText = currentSessionLogs.length; document.getElementById('detailPresent').innerText = currentSessionLogs.length;
+        let validTimeLogs = logsData.filter(log => isLogWithinSession(log.scanned_at, session.date, session.time_range));
+        
+        let uniqueValidScans = new Set();
+        
+        currentSessionLogs = validTimeLogs.map(log => {
+            const student = log.students || {};
+            
+            if (student.set_group && student.set_group !== sessionSetGroup) {
+                log.isValid = false;
+                log.displayStatus = `Restricted (Set ${student.set_group})`;
+            } else {
+                log.isValid = true;
+                log.displayStatus = log.status || 'Present';
+                uniqueValidScans.add(log.rfid_tag); 
+            }
+            return log;
+        });
+
+        const presentCount = uniqueValidScans.size;
+        const absentCount = Math.max(0, expectedCount - presentCount);
+
+        document.getElementById('detailTotal').innerText = expectedCount; 
+        document.getElementById('detailPresent').innerText = presentCount; 
+        if(document.getElementById('detailAbsent')) document.getElementById('detailAbsent').innerText = absentCount;
+        
         renderSessionDetailsTable();
-    } catch (error) { console.error(error); }
+    } catch (error) { console.error("Error loading session details:", error); }
 }
 
 function renderSessionDetailsTable() {
     const tbody = document.getElementById('sessionDetailTableBody'); if(!tbody) return;
     tbody.innerHTML = '';
+    
     const filteredLogs = currentSessionLogs.filter(log => {
         if (!currentSessionSearchTerm) return true;
-        const term = currentSessionSearchTerm.toLowerCase(); const student = log.students || {};
-        return (student.name && student.name.toLowerCase().includes(term)) || (student.student_id && student.student_id.toLowerCase().includes(term)) || (log.rfid_tag && log.rfid_tag.toLowerCase().includes(term));
+        const term = currentSessionSearchTerm.toLowerCase(); 
+        const student = log.students || {};
+        return (student.name && student.name.toLowerCase().includes(term)) || 
+               (student.student_id && student.student_id.toLowerCase().includes(term)) || 
+               (log.rfid_tag && log.rfid_tag.toLowerCase().includes(term));
     });
-    if (filteredLogs.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-muted);">No attendees found matching search.</td></tr>`; } else {
+    
+    if (filteredLogs.length === 0) { 
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-muted);">No attendees found matching search.</td></tr>`; 
+    } else {
         filteredLogs.forEach(log => {
             const student = log.students || {};
-            const avatar = student.image_url ? `<img src="${student.image_url}" style="width: 36px; height: 36px; border-radius: 10px; object-fit: cover;">` : `<div class="avatar" style="width: 36px; height: 36px; font-size: 1rem;">${student.name ? student.name.charAt(0) : '?'}</div>`;
+            const avatar = student.image_url 
+                ? `<img src="${student.image_url}" style="width: 36px; height: 36px; border-radius: 10px; object-fit: cover;">` 
+                : `<div style="width: 36px; height: 36px; background: #e2e8f0; color: #475569; display: flex; justify-content: center; align-items: center; border-radius: 10px; font-weight: bold;">${student.name ? student.name.charAt(0) : '?'}</div>`;
+            
+            const badgeStyle = log.isValid 
+                ? `background: var(--color-green-light); color: var(--color-green); padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;` 
+                : `background: var(--color-red-light); color: var(--color-red); padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;`;
+
             tbody.innerHTML += `
                 <tr class="fade-in-up" onclick="window.location.href='student-profile.html?id=${student.student_id}'" style="cursor: pointer;">
-                    <td><div class="student-info">${avatar}<div><p style="font-weight: 700; color: var(--text-dark);">${student.name || 'Unknown'}</p><p style="font-size: 0.8rem; color: var(--text-muted);">${student.student_id || 'No ID'}</p></div></div></td>
-                    <td><strong>${student.course || '-'}</strong> &bull; ${student.year || '-'}</td>
-                    <td><span class="badge badge-present">${log.status || 'Present'}</span></td>
+                    <td>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            ${avatar}
+                            <div>
+                                <p style="font-weight: 700; color: var(--text-dark); margin: 0;">${student.name || 'Unknown'}</p>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">${student.student_id || 'No ID'}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td><strong>${student.course || '-'}</strong> &bull; ${student.year || '-'} &bull; <strong>Set ${student.set_group || 'A'}</strong></td>
+                    <td><span style="${badgeStyle}">${log.displayStatus}</span></td>
                     <td>${new Date(log.scanned_at).toLocaleTimeString()}</td>
                 </tr>
             `;
@@ -396,7 +463,6 @@ function renderSessionDetailsTable() {
     }
 }
 
-// 🌟 FIX: Updated Student Profile to ONLY count absences from their assigned Set 🌟
 async function loadStudentProfile() {
     const urlParams = new URLSearchParams(window.location.search);
     const studentId = urlParams.get('id'); if (!studentId) return;
@@ -419,7 +485,6 @@ async function loadStudentProfile() {
         
         const logsData = await fetchSupabase(`/attendance_logs?rfid_tag=eq.${student.rfid_tag}&select=*&order=scanned_at.desc`);
         
-        // Calculate Absences Correctly Based on Set Group
         const allSessions = await fetchSupabase('/sessions?select=*');
         const validSessionsForStudent = allSessions.filter(s => s.set_group === student.set_group);
         
@@ -451,7 +516,6 @@ async function loadStudentProfile() {
     } catch (e) { console.error(e); }
 }
 
-// 🌟 FIX: Dashboard now correctly calculates absent students based on who was scheduled for today 🌟
 async function loadDashboardLiveStats() {
     if (!document.getElementById('dashTotalStudents')) return;
     try {
@@ -462,18 +526,34 @@ async function loadDashboardLiveStats() {
         const todayStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         const logs = await fetchSupabase('/attendance_logs?select=*');
         const todayLogs = logs.filter(log => new Date(log.scanned_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) === todayStr);
-        const uniquePresents = new Set(todayLogs.map(l => l.rfid_tag)).size;
         
         const sessions = await fetchSupabase('/sessions?select=*');
         const todaySessions = sessions.filter(s => s.date === todayStr);
         
-        let absents = 0;
         let expectedStudentsToday = [];
         todaySessions.forEach(ts => {
             const studentsForThisSet = students.filter(st => st.set_group === ts.set_group);
             expectedStudentsToday = [...expectedStudentsToday, ...studentsForThisSet.map(st => st.id)];
         });
         const expectedCount = new Set(expectedStudentsToday).size;
+
+        let validPresentsToday = new Set();
+        todayLogs.forEach(log => {
+            const student = students.find(s => s.rfid_tag === log.rfid_tag);
+            if (student) {
+                const tappedDuringValidSession = todaySessions.find(ts => 
+                    ts.set_group === student.set_group && 
+                    isLogWithinSession(log.scanned_at, ts.date, ts.time_range)
+                );
+                
+                if (tappedDuringValidSession) {
+                    validPresentsToday.add(student.id);
+                }
+            }
+        });
+
+        const uniquePresents = validPresentsToday.size;
+        let absents = 0;
 
         if (todaySessions.length > 0) absents = Math.max(0, expectedCount - uniquePresents);
         
@@ -491,7 +571,6 @@ async function loadDashboardLiveStats() {
     } catch (e) {}
 }
 
-// 🌟 FIX: Analytics strictly pairs students to their scheduled set 🌟
 async function loadAnalyticsData() {
     if (!document.getElementById('statAvgAtt')) return;
     try {
@@ -537,9 +616,16 @@ async function loadAnalyticsData() {
             recentSessions.forEach(session => {
                 labels.push(session.subject || session.date.substring(0, 5));
                 const sessionLogs = logs.filter(log => isLogWithinSession(log.scanned_at, session.date, session.time_range));
-                const uniquePresents = new Set(sessionLogs.map(l => l.rfid_tag)).size;
                 
-                // Only count expected absences based on the set group assigned to this session
+                let validPresentsForThisSession = new Set();
+                sessionLogs.forEach(l => {
+                    const student = students.find(st => st.rfid_tag === l.rfid_tag);
+                    if (student && student.set_group === session.set_group) {
+                        validPresentsForThisSession.add(student.id);
+                    }
+                });
+                
+                const uniquePresents = validPresentsForThisSession.size;
                 const expectedStudents = students.filter(st => st.set_group === session.set_group).length;
                 
                 presentData.push(uniquePresents); 
@@ -559,8 +645,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.nav-menu .nav-item').forEach(item => { item.classList.remove('active'); if (item.getAttribute('href') === currentLocation) item.classList.add('active'); });
 
     const sidebar = document.getElementById('sidebar'); const mainContent = document.querySelector('.main-content');
-    document.getElementById('openSidebarBtn')?.addEventListener('click', () => sidebar.classList.add('open'));
-    document.getElementById('closeSidebarBtn')?.addEventListener('click', () => { window.innerWidth <= 768 ? sidebar.classList.remove('open') : (sidebar.classList.toggle('collapsed'), mainContent?.classList.toggle('expanded')); });
+    if (document.getElementById('openSidebarBtn')) document.getElementById('openSidebarBtn').addEventListener('click', () => sidebar.classList.add('open'));
+    if (document.getElementById('closeSidebarBtn')) document.getElementById('closeSidebarBtn').addEventListener('click', () => { window.innerWidth <= 768 ? sidebar.classList.remove('open') : (sidebar.classList.toggle('collapsed'), mainContent?.classList.toggle('expanded')); });
 
     document.querySelectorAll('.logout-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -614,7 +700,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Standard DOM Loaders
     if (document.getElementById('studentTableBody')) {
         loadStudents();
         const searchInput = document.querySelector('.search-bar input');
@@ -634,9 +719,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(checkActiveSessions, 1000); 
     if (currentLocation.includes('student-profile.html')) loadStudentProfile();
 
-    // ==========================================
-    // 🌟 EXCEL EXPORT LOGIC FOR CLASS SESSIONS 🌟
-    // ==========================================
     function downloadCSV(csvContent, filename) {
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
@@ -649,7 +731,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(link);
     }
 
-    // 1. Export Specific Session CSV (from session-detail.html)
     const exportSessionCsvBtn = document.getElementById('exportSessionCsvBtn');
     if (exportSessionCsvBtn) {
         exportSessionCsvBtn.addEventListener('click', () => {
@@ -657,24 +738,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast("No attendance data to export for this session.", "error");
                 return;
             }
-            
             let csv = "Student ID,Full Name,Course,Year,Status,Time Scanned\n";
-            
             currentSessionLogs.forEach(log => {
                 const student = log.students || {};
                 const timeStr = new Date(log.scanned_at).toLocaleTimeString();
                 csv += `"${student.student_id || 'N/A'}","${student.name || 'Unknown'}","${student.course || ''}","${student.year || ''}","${log.status || 'Present'}","${timeStr}"\n`;
             });
-            
             const sessionTitle = document.getElementById('detailSessionTitle') ? document.getElementById('detailSessionTitle').innerText.replace(/[^a-z0-9]/gi, '_') : 'Class_Session';
             const sessionDate = document.getElementById('detailSessionDate') ? document.getElementById('detailSessionDate').innerText.replace(/[^a-z0-9]/gi, '_') : 'Date';
-            
             downloadCSV(csv, `${sessionTitle}_${sessionDate}_Attendance.csv`);
             showToast("Session data exported to Excel!", "success");
         });
     }
 
-    // 🌟 FIX: Global Export checks Set alignments 🌟
     const exportGlobalCsvBtn = document.getElementById('exportGlobalCsvBtn');
     if (exportGlobalCsvBtn) {
         exportGlobalCsvBtn.addEventListener('click', async () => {
@@ -684,7 +760,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const students = await fetchSupabase('/students?select=*');
                 const sessions = await fetchSupabase('/sessions?select=*');
                 const logs = await fetchSupabase('/attendance_logs?select=*');
-                
                 let csv = "Student ID,Full Name,Course,Year,Set,RFID Tag,Total Classes Present,Total Classes Absent\n";
                 students.forEach(s => {
                     const studentSessions = sessions.filter(sess => sess.set_group === s.set_group);
@@ -696,7 +771,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     let absentCount = studentSessions.length - presentCount;
                     csv += `"${s.student_id}","${s.name}","${s.course}","${s.year}","${s.set_group || 'A'}","${s.rfid_tag}",${presentCount},${absentCount}\n`;
                 });
-                
                 downloadCSV(csv, "Overall_Attendance_Report.csv");
                 showToast("Analytics successfully exported!", "success");
             } catch (e) { showToast("Error generating CSV.", "error"); } finally { exportGlobalCsvBtn.innerHTML = ogText; }
