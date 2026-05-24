@@ -54,7 +54,7 @@ async function fetchSupabase(endpoint, options = {}) {
 async function callGroqAI(userPrompt, systemPrompt = "You are a helpful assistant.", requireJson = false) {
     try {
         const bodyPayload = {
-            model: "meta-llama/llama-4-scout-17b-16e-instruct", // FIXED: Valid Groq model
+            model: "meta-llama/llama-4-scout-17b-16e-instruct",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
@@ -73,7 +73,6 @@ async function callGroqAI(userPrompt, systemPrompt = "You are a helpful assistan
 
         const data = await response.json();
         
-        // Catch API errors directly
         if (!response.ok) {
             console.error("Groq API Error:", data);
             throw new Error(data.error?.message || "API Request Failed");
@@ -384,7 +383,7 @@ async function loadSessionDetails() {
         document.getElementById('detailSessionLoc').innerText = session.location || '-';
         
         const allStudents = await fetchSupabase('/students?select=*');
-        const expectedStudents = allStudents.filter(s => s.set_group === sessionSetGroup);
+        const expectedStudents = sessionSetGroup === 'General' ? allStudents : allStudents.filter(s => s.set_group === sessionSetGroup);
         const expectedCount = expectedStudents.length;
 
         const logsData = await fetchSupabase('/attendance_logs?select=*,students(*)&order=scanned_at.desc');
@@ -395,7 +394,7 @@ async function loadSessionDetails() {
         currentSessionLogs = validTimeLogs.map(log => {
             const student = log.students || {};
             
-            if (student.set_group && student.set_group !== sessionSetGroup) {
+            if (sessionSetGroup !== 'General' && student.set_group && student.set_group !== sessionSetGroup) {
                 log.isValid = false;
                 log.displayStatus = `Restricted (Set ${student.set_group})`;
             } else {
@@ -486,7 +485,7 @@ async function loadStudentProfile() {
         const logsData = await fetchSupabase(`/attendance_logs?rfid_tag=eq.${student.rfid_tag}&select=*&order=scanned_at.desc`);
         
         const allSessions = await fetchSupabase('/sessions?select=*');
-        const validSessionsForStudent = allSessions.filter(s => s.set_group === student.set_group);
+        const validSessionsForStudent = allSessions.filter(s => s.set_group === 'General' || s.set_group === student.set_group);
         
         let validPresentCount = 0;
         validSessionsForStudent.forEach(session => {
@@ -532,7 +531,7 @@ async function loadDashboardLiveStats() {
         
         let expectedStudentsToday = [];
         todaySessions.forEach(ts => {
-            const studentsForThisSet = students.filter(st => st.set_group === ts.set_group);
+            const studentsForThisSet = ts.set_group === 'General' ? students : students.filter(st => st.set_group === ts.set_group);
             expectedStudentsToday = [...expectedStudentsToday, ...studentsForThisSet.map(st => st.id)];
         });
         const expectedCount = new Set(expectedStudentsToday).size;
@@ -542,7 +541,7 @@ async function loadDashboardLiveStats() {
             const student = students.find(s => s.rfid_tag === log.rfid_tag);
             if (student) {
                 const tappedDuringValidSession = todaySessions.find(ts => 
-                    ts.set_group === student.set_group && 
+                    (ts.set_group === 'General' || ts.set_group === student.set_group) && 
                     isLogWithinSession(log.scanned_at, ts.date, ts.time_range)
                 );
                 
@@ -586,7 +585,7 @@ async function loadAnalyticsData() {
         let atRisk = 0;
 
         students.forEach(student => {
-            const mySessions = sessions.filter(s => s.set_group === student.set_group);
+            const mySessions = sessions.filter(s => s.set_group === 'General' || s.set_group === student.set_group);
             totalPossibleSeats += mySessions.length;
 
             let myPresents = 0;
@@ -620,13 +619,13 @@ async function loadAnalyticsData() {
                 let validPresentsForThisSession = new Set();
                 sessionLogs.forEach(l => {
                     const student = students.find(st => st.rfid_tag === l.rfid_tag);
-                    if (student && student.set_group === session.set_group) {
+                    if (student && (session.set_group === 'General' || student.set_group === session.set_group)) {
                         validPresentsForThisSession.add(student.id);
                     }
                 });
                 
                 const uniquePresents = validPresentsForThisSession.size;
-                const expectedStudents = students.filter(st => st.set_group === session.set_group).length;
+                const expectedStudents = session.set_group === 'General' ? students.length : students.filter(st => st.set_group === session.set_group).length;
                 
                 presentData.push(uniquePresents); 
                 absentData.push(Math.max(0, expectedStudents - uniquePresents));
@@ -762,7 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const logs = await fetchSupabase('/attendance_logs?select=*');
                 let csv = "Student ID,Full Name,Course,Year,Set,RFID Tag,Total Classes Present,Total Classes Absent\n";
                 students.forEach(s => {
-                    const studentSessions = sessions.filter(sess => sess.set_group === s.set_group);
+                    const studentSessions = sessions.filter(sess => sess.set_group === 'General' || sess.set_group === s.set_group);
                     let presentCount = 0;
                     studentSessions.forEach(session => {
                         const hasAttended = logs.some(log => log.rfid_tag === s.rfid_tag && isLogWithinSession(log.scanned_at, session.date, session.time_range));
