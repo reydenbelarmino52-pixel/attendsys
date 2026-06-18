@@ -27,7 +27,8 @@ const CONFIG = {
     SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6c2Rrc2h4a3BpcnVycmlhZm5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MTQxMTMsImV4cCI6MjA5NDI5MDExM30.iL0JXhX-xlHThdgKJ69Dm7Xja-gywoE7X7aIV3ci0bs"
 };
 
-const GROQ_API_KEY = "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";
+// ⚠️ IMPORTANT: REPLACE THE STRING BELOW WITH YOUR NEW, VALID GROQ API KEY ⚠️
+const GROQ_API_KEY = "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";
 
 let sessionDataList = [];
 let studentDataList = [];
@@ -54,7 +55,7 @@ async function fetchSupabase(endpoint, options = {}) {
 async function callGroqAI(userPrompt, systemPrompt = "You are a helpful assistant.", requireJson = false) {
     try {
         const bodyPayload = {
-            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            model: "meta-llama/llama-4-scout-17b-16e-instruct", // ✅ UPDATED MODEL
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
